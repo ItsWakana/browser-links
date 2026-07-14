@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111817">
+  <title>Terminal Start Page</title>
+  <style>
+    :root { --ink:#111817; --panel:#182321; --panel-deep:#131d1b; --text:#bed0c8; --bright:#eef4e9; --accent:#8dbdb0; --line:#496a61; --muted:#86a299; --red:#e78b8d; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; color:var(--text); background:var(--ink); font:16px/1.55 ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace; overflow-x:hidden; }
+    body::before { content:""; position:fixed; inset:0; pointer-events:none; z-index:10; }
+    body::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:11; box-shadow:inset 0 0 80px #0008; }
+    .wrap { width:min(1100px, calc(100% - 36px)); margin:auto; padding:32px 0 54px; }
+    header { border:1px solid var(--line); background:linear-gradient(135deg,#1b2925,#111817); box-shadow:0 0 22px #547a6d24, inset 0 0 22px #6c988c12; padding:18px 20px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+    .brand { font-weight:bold; color:var(--bright); letter-spacing:.06em; margin-right:auto; }
+    .brand::before { content:"> "; color:var(--accent); }
+    #clock { color:var(--bright); font-size:1.05rem; white-space:nowrap; }
+    button { font:inherit; color:var(--text); background:var(--panel-deep); border:1px solid var(--line); padding:7px 11px; cursor:pointer; transition:.15s; }
+    button:hover, button:focus { color:#101817; background:var(--accent); outline:none; box-shadow:0 0 12px #8dbdb066; }
+    .intro { color:var(--muted); margin:25px 2px 19px; }
+    .cursor { display:inline-block; width:.64em; height:1em; vertical-align:-.17em; background:var(--accent); box-shadow:0 0 7px #8dbdb088; animation:blink 1s steps(1,end) infinite; }
+    @keyframes blink { 50% { opacity:0; } }
+    #grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px; }
+    .notes { margin-top:24px; border:1px solid var(--line); background:linear-gradient(135deg,#1b2825,#16211f); box-shadow:inset 0 0 18px #6c988c0d; padding:16px; }
+    .notes-head { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .notes h2 { margin-right:auto; }
+    #noteStatus { color:var(--muted); font-size:.78rem; }
+    #note { min-height:130px; line-height:1.55; color:var(--bright); background:#111a18; border-color:#5b7c72; overflow:hidden; resize:none; }
+    .note-clear { font-size:.78rem; padding:3px 6px; color:var(--muted); background:transparent; }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    .category { min-height:164px; border:1px solid var(--line); background:var(--panel); padding:16px; box-shadow:inset 0 0 18px #6c988c0d; position:relative; transition:border-color .15s, transform .15s, opacity .15s; }
+    .category[draggable="true"] { cursor:grab; }
+    .category.dragging { opacity:.38; transform:scale(.98); }
+    .category.drag-over { border-color:var(--bright); box-shadow:0 0 15px #b9d7cb44; }
+    .cat-head { display:flex; gap:8px; align-items:center; padding-bottom:10px; border-bottom:1px dashed var(--line); margin-bottom:8px; }
+    h2 { font-size:1rem; color:var(--bright); margin:0; letter-spacing:.08em; text-transform:uppercase; overflow-wrap:anywhere; }
+    ul { list-style:none; margin:0; padding:0; }
+    li { display:flex; align-items:center; gap:9px; min-width:0; padding:7px 0; }
+    li[draggable="true"] { cursor:grab; }
+    li.link-dragging { opacity:.35; }
+    li.link-drag-over { border-top:2px solid var(--accent); padding-top:5px; }
+    .category.link-drop-target { border-color:var(--accent); box-shadow:0 0 16px #8dbdb055; }
+    a { color:var(--text); text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    a:hover, a:focus { color:var(--bright); text-decoration:underline; outline:none; }
+    .favicon { width:16px; height:16px; image-rendering:auto; flex:0 0 auto; opacity:.95; }
+    .link-action { padding:1px 4px; background:transparent; border:0; color:var(--muted); line-height:1; opacity:0; }
+    .edit { margin-left:auto; font-size:.72rem; }
+    .delete { font-size:18px; }
+    li:hover .link-action, li:focus-within .link-action, .category:hover .delete-category { opacity:1; }
+    .delete:hover, .delete:focus { background:transparent; color:var(--red); box-shadow:none; }
+    .delete-category { padding:0 3px; margin-left:auto; color:var(--muted); background:transparent; border:0; font-size:16px; opacity:0; }
+    .add-link { padding:1px 5px; font-size:.78rem; background:transparent; border-color:transparent; color:var(--accent); white-space:nowrap; }
+    .add-link:hover, .add-link:focus { color:#101817; border-color:var(--accent); }
+    .empty { color:var(--muted); font-size:.9rem; padding:7px 0; }
+    dialog { width:min(465px, calc(100% - 28px)); color:var(--text); background:var(--panel-deep); border:1px solid var(--accent); box-shadow:0 0 38px #8dbdb044; padding:0; font:inherit; }
+    dialog::backdrop { background:#000c; }
+    .modal-inner { padding:21px; }
+    .modal-title { color:var(--bright); margin:0 0 16px; font-size:1.1rem; }
+    form { display:grid; gap:12px; }
+    label { display:grid; gap:5px; color:var(--muted); font-size:.9rem; }
+    input, select, textarea { width:100%; color:var(--bright); background:#101817; border:1px solid var(--line); padding:9px; font:inherit; outline:none; }
+    input:focus, select:focus, textarea:focus { border-color:var(--accent); box-shadow:0 0 12px #8dbdb044; }
+    textarea { resize:vertical; min-height:135px; }
+    .form-row { display:flex; gap:10px; justify-content:flex-end; margin-top:6px; }
+    .error { min-height:1.2em; color:#ff8590; font-size:.85rem; margin:0; }
+    .modal-actions { display:flex; gap:9px; flex-wrap:wrap; margin-top:15px; }
+    .modal-actions .spacer { flex:1; }
+    @media (max-width:560px) { .wrap { width:min(100% - 22px, 1100px); padding-top:12px; } header { padding:14px; gap:10px; } .brand { flex-basis:100%; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <div class="brand">PERSONAL_BROWSER.EXE</div>
+      <div id="clock" aria-label="Current time"></div>
+      <button id="manageBtn" type="button">[ ADMIN MODE ]</button>
+      <button id="backupBtn" type="button">[ BACKUP ]</button>
+      <button id="importBtn" type="button">[ IMPORT ]</button>
+    </header>
+    <p class="intro">Drag directories to reorder. Drag links up or down to sort them, or onto another directory to move them. Use + ADD to file a new link<span class="cursor" aria-hidden="true"></span></p>
+    <section id="grid" aria-live="polite"></section>
+    <aside class="notes" aria-label="Personal scratchpad">
+      <div class="notes-head"><h2>[ SCRATCHPAD ]</h2><span id="noteStatus">SAVES AUTOMATICALLY</span><button id="clearNote" class="note-clear" type="button">CLEAR</button></div>
+      <label for="note" class="sr-only">Personal note</label>
+      <textarea id="note" placeholder="Leave yourself a note…" spellcheck="true"></textarea>
+    </aside>
+  </main>
+
+  <dialog id="adminDialog"><div class="modal-inner">
+    <h2 class="modal-title">ADMIN MODE // ADD DIRECTORY ENTRY</h2>
+    <form id="entryForm">
+      <label>Operation
+        <select id="entryType"><option value="category">Create category</option><option value="link">Add link</option></select>
+      </label>
+      <label id="categoryNameField">Category name <input id="categoryName" maxlength="50" placeholder="e.g. WORK" autocomplete="off"></label>
+      <div id="linkFields" hidden>
+        <label>Category <select id="linkCategory"></select></label>
+        <label>Link name <input id="linkName" maxlength="80" placeholder="e.g. Example" autocomplete="off"></label>
+        <label>URL or local path <input id="linkUrl" type="text" placeholder="https://example.com or C:\\Sites\\index.html" autocomplete="off"></label>
+      </div>
+      <p class="error" id="entryError"></p>
+      <div class="form-row"><button type="button" data-close>Cancel</button><button type="submit">Save entry</button></div>
+    </form>
+  </div></dialog>
+  <dialog id="editDialog"><div class="modal-inner">
+    <h2 class="modal-title">EDIT LINK</h2>
+    <form id="editLinkForm">
+      <label>Link name <input id="editLinkName" maxlength="80" autocomplete="off"></label>
+      <label>URL or local path <input id="editLinkUrl" type="text" autocomplete="off"></label>
+      <p class="error" id="editLinkError"></p>
+      <div class="form-row"><button type="button" data-close>Cancel</button><button type="submit">Save changes</button></div>
+    </form>
+  </div></dialog>
+  <dialog id="importDialog"><div class="modal-inner">
+    <h2 class="modal-title">IMPORT BACKUP // JSON</h2>
+    <form id="importForm">
+      <label>Paste a previously exported backup<textarea id="importData" spellcheck="false" placeholder='[{"id":"...","name":"...","links":[]}]'></textarea></label>
+      <p class="error" id="importError"></p>
+      <div class="form-row"><button type="button" data-close>Cancel</button><button type="submit">Replace directory</button></div>
+    </form>
+  </div></dialog>
+
+  <script>
+    (() => {
+      const STORAGE_KEY = 'retroTerminalLinks.v1';
+      const NOTE_STORAGE_KEY = 'retroTerminalNote.v1';
+      const defaults = [
+        { id: crypto.randomUUID(), name: 'SEARCH', links: [{ id: crypto.randomUUID(), name: 'Google', url: 'https://www.google.com' }, { id: crypto.randomUUID(), name: 'DuckDuckGo', url: 'https://duckduckgo.com' }] },
+        { id: crypto.randomUUID(), name: 'MEDIA', links: [{ id: crypto.randomUUID(), name: 'YouTube', url: 'https://www.youtube.com' }] },
+        { id: crypto.randomUUID(), name: 'COMMUNITY', links: [{ id: crypto.randomUUID(), name: 'Reddit', url: 'https://www.reddit.com' }] }
+      ];
+      const $ = s => document.querySelector(s);
+      const grid = $('#grid');
+      let categories;
+      let editingLink = null;
+      const id = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+      const save = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(categories));
+      const validData = value => Array.isArray(value) && value.every(c => c && typeof c.id === 'string' && typeof c.name === 'string' && Array.isArray(c.links) && c.links.every(l => l && typeof l.id === 'string' && typeof l.name === 'string' && typeof l.url === 'string'));
+      function load() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw === null) { categories = defaults; save(); return; }
+        try { const parsed = JSON.parse(raw); categories = validData(parsed) ? parsed : []; }
+        catch { categories = []; }
+      }
+      function resizeNote() { const note = $('#note'); note.style.height = 'auto'; note.style.height = `${Math.max(130, note.scrollHeight)}px`; }
+      function loadNote() { $('#note').value = localStorage.getItem(NOTE_STORAGE_KEY) || ''; resizeNote(); }
+      function saveNote() { resizeNote(); localStorage.setItem(NOTE_STORAGE_KEY, $('#note').value); $('#noteStatus').textContent = 'SAVED'; clearTimeout(saveNote.statusTimer); saveNote.statusTimer = setTimeout(() => $('#noteStatus').textContent = 'SAVES AUTOMATICALLY', 1200); }
+      function favicon(url) { try { const parsed = new URL(url); return parsed.protocol === 'file:' ? '' : `https://www.google.com/s2/favicons?sz=32&domain=${encodeURIComponent(parsed.hostname)}`; } catch { return ''; } }
+      function normalizeUrl(value) {
+        let input = value.trim();
+        if (/^[a-zA-Z]:[\\/]/.test(input)) input = `file:///${input.replace(/\\/g, '/')}`;
+        else if (/^\\\\/.test(input)) input = `file:${input.replace(/\\/g, '/')}`;
+        else if (/^\.\.?[\\/]/.test(input)) input = new URL(input.replace(/\\/g, '/'), location.href).href;
+        const parsed = new URL(input);
+        if (!['http:', 'https:', 'file:'].includes(parsed.protocol)) throw Error();
+        return parsed.href;
+      }
+      function render() {
+        grid.replaceChildren();
+        if (!categories.length) { grid.innerHTML = '<div class="category"><div class="empty">No categories found. Open ADMIN MODE to create one.</div></div>'; return; }
+        categories.forEach(category => {
+          const card = document.createElement('article'); card.className = 'category'; card.draggable = true; card.dataset.categoryId = category.id;
+          card.addEventListener('dragstart', event => {
+            if (event.target.closest('button, a, li')) return;
+            event.dataTransfer.setData('text/plain', category.id); event.dataTransfer.effectAllowed = 'move'; card.classList.add('dragging');
+          });
+          card.addEventListener('dragend', () => document.querySelectorAll('.category').forEach(item => item.classList.remove('dragging', 'drag-over', 'link-drop-target')));
+          card.addEventListener('dragover', event => { event.preventDefault(); const isLink = Array.from(event.dataTransfer.types).includes('application/x-personal-browser-link'); event.dataTransfer.dropEffect = 'move'; card.classList.toggle('link-drop-target', isLink); card.classList.toggle('drag-over', !isLink); });
+          card.addEventListener('dragleave', () => card.classList.remove('drag-over', 'link-drop-target'));
+          card.addEventListener('drop', event => {
+            event.preventDefault(); card.classList.remove('drag-over', 'link-drop-target');
+            const linkTransfer = event.dataTransfer.getData('application/x-personal-browser-link');
+            if (linkTransfer) {
+              try {
+                const { categoryId, linkId } = JSON.parse(linkTransfer); const sourceCategory = categories.find(item => item.id === categoryId);
+                if (!sourceCategory || sourceCategory.id === category.id) return;
+                const linkIndex = sourceCategory.links.findIndex(item => item.id === linkId); if (linkIndex < 0) return;
+                const [link] = sourceCategory.links.splice(linkIndex, 1); category.links.push(link); save(); render();
+              } catch { /* Ignore malformed drag data. */ }
+              return;
+            }
+            const sourceId = event.dataTransfer.getData('text/plain');
+            if (!sourceId || sourceId === category.id) return;
+            const sourceIndex = categories.findIndex(item => item.id === sourceId), targetIndex = categories.findIndex(item => item.id === category.id);
+            if (sourceIndex < 0 || targetIndex < 0) return;
+            const [moved] = categories.splice(sourceIndex, 1); categories.splice(sourceIndex < targetIndex ? targetIndex - 1 : targetIndex, 0, moved); save(); render();
+          });
+          const head = document.createElement('div'); head.className = 'cat-head';
+          const title = document.createElement('h2'); title.textContent = `[ ${category.name} ]`;
+          const removeCat = document.createElement('button'); removeCat.className = 'delete-category'; removeCat.title = `Delete ${category.name}`; removeCat.textContent = '×';
+          removeCat.textContent = '\u00d7';
+          const addLink = document.createElement('button'); addLink.className = 'add-link'; addLink.type = 'button'; addLink.textContent = '+ ADD'; addLink.title = `Add a link to ${category.name}`; addLink.onclick = () => showLinkForm(category.id);
+          removeCat.onclick = () => { if (confirm(`Delete category "${category.name}" and all its links?`)) { categories = categories.filter(c => c.id !== category.id); save(); render(); } };
+          head.append(title, addLink, removeCat); card.append(head);
+          const list = document.createElement('ul');
+          if (!category.links.length) list.innerHTML = '<li class="empty">-- directory empty --</li>';
+          category.links.forEach(link => {
+            const li = document.createElement('li'); li.draggable = true;
+            li.addEventListener('dragstart', event => { event.stopPropagation(); event.dataTransfer.setData('application/x-personal-browser-link', JSON.stringify({ categoryId: category.id, linkId: link.id })); event.dataTransfer.effectAllowed = 'move'; li.classList.add('link-dragging'); });
+            li.addEventListener('dragend', () => { li.classList.remove('link-dragging'); document.querySelectorAll('.category').forEach(item => item.classList.remove('link-drop-target')); document.querySelectorAll('.link-drag-over').forEach(item => item.classList.remove('link-drag-over')); });
+            li.addEventListener('dragover', event => { if (!Array.from(event.dataTransfer.types).includes('application/x-personal-browser-link')) return; event.preventDefault(); event.stopPropagation(); li.classList.add('link-drag-over'); });
+            li.addEventListener('dragleave', () => li.classList.remove('link-drag-over'));
+            li.addEventListener('drop', event => {
+              const transfer = event.dataTransfer.getData('application/x-personal-browser-link'); if (!transfer) return;
+              event.preventDefault(); event.stopPropagation(); li.classList.remove('link-drag-over');
+              try {
+                const { categoryId, linkId } = JSON.parse(transfer); const sourceCategory = categories.find(item => item.id === categoryId);
+                if (!sourceCategory || (sourceCategory.id === category.id && linkId === link.id)) return;
+                const sourceIndex = sourceCategory.links.findIndex(item => item.id === linkId), targetIndex = category.links.findIndex(item => item.id === link.id);
+                if (sourceIndex < 0 || targetIndex < 0) return;
+                const [moved] = sourceCategory.links.splice(sourceIndex, 1); const insertAt = sourceCategory.id === category.id && sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+                category.links.splice(insertAt, 0, moved); save(); render();
+              } catch { /* Ignore malformed drag data. */ }
+            });
+            const icon = document.createElement('img'); icon.className = 'favicon'; icon.alt = ''; icon.src = favicon(link.url);
+            const a = document.createElement('a'); a.href = link.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.draggable = false; a.textContent = link.name;
+            const edit = document.createElement('button'); edit.className = 'link-action edit'; edit.type = 'button'; edit.textContent = 'EDIT'; edit.title = `Edit ${link.name}`; edit.onclick = () => showEditLink(category.id, link.id);
+            const del = document.createElement('button'); del.className = 'delete'; del.title = `Delete ${link.name}`; del.textContent = '×';
+            del.textContent = '\u00d7'; del.className = 'link-action delete';
+            del.onclick = () => { if (confirm(`Delete "${link.name}" from ${category.name}?`)) { category.links = category.links.filter(l => l.id !== link.id); save(); render(); } };
+            li.append(icon, a, edit, del); list.append(li);
+          });
+          card.append(list); grid.append(card);
+        });
+      }
+      function updateClock() { $('#clock').textContent = new Intl.DateTimeFormat([], { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false, year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date()).replace(',', ' //'); }
+      function refreshCategoryOptions() { $('#linkCategory').replaceChildren(...categories.map(c => new Option(c.name, c.id))); }
+      function showAdmin() { $('#entryForm').reset(); refreshCategoryOptions(); $('#entryType').value = 'category'; toggleFields(); $('#entryError').textContent = ''; $('#adminDialog').showModal(); $('#categoryName').focus(); }
+      function showLinkForm(categoryId) { $('#entryForm').reset(); refreshCategoryOptions(); $('#entryType').value = 'link'; toggleFields(); $('#linkCategory').value = categoryId; $('#entryError').textContent = ''; $('#adminDialog').showModal(); $('#linkName').focus(); }
+      function showEditLink(categoryId, linkId) { const category = categories.find(item => item.id === categoryId); const link = category?.links.find(item => item.id === linkId); if (!link) return; editingLink = { categoryId, linkId }; $('#editLinkName').value = link.name; $('#editLinkUrl').value = link.url; $('#editLinkError').textContent = ''; $('#editDialog').showModal(); $('#editLinkName').focus(); }
+      function toggleFields() { const isLink = $('#entryType').value === 'link'; $('#categoryNameField').hidden = isLink; $('#linkFields').hidden = !isLink; refreshCategoryOptions(); }
+      $('#manageBtn').onclick = showAdmin;
+      $('#note').addEventListener('input', saveNote);
+      $('#clearNote').onclick = () => { if (confirm('Clear your scratchpad?')) { $('#note').value = ''; saveNote(); } };
+      $('#entryType').onchange = toggleFields;
+      $('#editLinkForm').onsubmit = event => {
+        event.preventDefault(); const error = $('#editLinkError'); error.textContent = ''; const name = $('#editLinkName').value.trim(); let url;
+        try { url = normalizeUrl($('#editLinkUrl').value); } catch { error.textContent = 'Enter a web URL or a valid local file path.'; return; }
+        if (!name) { error.textContent = 'Link name required.'; return; }
+        const category = categories.find(item => item.id === editingLink?.categoryId); const link = category?.links.find(item => item.id === editingLink?.linkId);
+        if (!link) { error.textContent = 'That link no longer exists.'; return; }
+        link.name = name; link.url = url; save(); render(); $('#editDialog').close(); editingLink = null;
+      };
+      $('#entryForm').onsubmit = e => {
+        e.preventDefault(); const err = $('#entryError'); err.textContent = '';
+        if ($('#entryType').value === 'category') { const name = $('#categoryName').value.trim(); if (!name) return err.textContent = 'Category name required.'; if (categories.some(c => c.name.toLowerCase() === name.toLowerCase())) return err.textContent = 'That category already exists.'; categories.push({ id:id(), name, links:[] }); }
+        else { const name = $('#linkName').value.trim(), urlText = $('#linkUrl').value.trim(); let url; try { url = normalizeUrl(urlText); } catch { return err.textContent = 'Enter a web URL or a valid local file path.'; } if (!name) return err.textContent = 'Link name required.'; const cat = categories.find(c => c.id === $('#linkCategory').value); if (!cat) return err.textContent = 'Choose a category first.'; cat.links.push({ id:id(), name, url }); }
+        save(); render(); $('#adminDialog').close();
+      };
+      $('#backupBtn').onclick = async () => { try { await navigator.clipboard.writeText(JSON.stringify(categories, null, 2)); $('#backupBtn').textContent = '[ COPIED! ]'; setTimeout(() => $('#backupBtn').textContent = '[ BACKUP ]', 1400); } catch { alert('Clipboard access was blocked. Please allow clipboard permission and try again.'); } };
+      $('#importBtn').onclick = () => { $('#importForm').reset(); $('#importError').textContent = ''; $('#importDialog').showModal(); $('#importData').focus(); };
+      $('#importForm').onsubmit = e => { e.preventDefault(); try { const parsed = JSON.parse($('#importData').value); if (!validData(parsed)) throw Error(); categories = parsed; save(); render(); $('#importDialog').close(); } catch { $('#importError').textContent = 'Invalid backup format. Nothing was changed.'; } };
+      document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
+      load(); loadNote(); render(); updateClock(); setInterval(updateClock, 1000);
+    })();
+  </script>
+</body>
+</html>
