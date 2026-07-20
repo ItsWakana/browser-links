@@ -214,7 +214,7 @@
               } catch { /* Ignore malformed drag data. */ }
             });
             const icon = document.createElement('img'); icon.className = 'favicon'; icon.alt = ''; icon.src = favicon(link.url);
-            const a = document.createElement('a'); a.href = link.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.draggable = false; a.textContent = link.name;
+            const a = document.createElement('a'); a.href = link.url; a.draggable = false; a.textContent = link.name;
             const edit = document.createElement('button'); edit.className = 'link-action edit'; edit.type = 'button'; edit.textContent = 'EDIT'; edit.title = `Edit ${link.name}`; edit.onclick = () => showEditLink(category.id, link.id);
             const del = document.createElement('button'); del.className = 'delete'; del.title = `Delete ${link.name}`; del.textContent = '×';
             del.textContent = '\u00d7'; del.className = 'link-action delete';
